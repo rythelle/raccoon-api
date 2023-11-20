@@ -1,5 +1,7 @@
 <script>
   import { ref, onMounted, reactive } from 'vue';
+  import ApiLayout from './components/ApiLayout.vue';
+
   import Tree from 'primevue/tree';
   import TabView from 'primevue/tabview';
   import TabPanel from 'primevue/tabpanel';
@@ -10,10 +12,10 @@
   import SpeedDial from 'primevue/speeddial';
   import InputText from 'primevue/inputtext';
   import { useToast } from 'primevue/usetoast';
-  import { NodeService } from './service/NodeService';
 
   export default {
     components: {
+      ApiLayout,
       Tree,
       TabView,
       TabPanel,
@@ -133,7 +135,6 @@
 
       const newEventToAdd = () => {
         if (itemTypeToAdd.value === 'folder') {
-          console.log('selected', selected.value);
           addFolder(itemName.value, selected.value);
         } else if (itemTypeToAdd.value === 'httpRequest') {
           addHTTPRequest(itemName.value, selected.value);
@@ -192,7 +193,23 @@
         const node = findFolderByKey(selected.value, nodes.value);
 
         if (node.data !== 'folder' && tabs.findIndex((tab) => tab.key === node.key) === -1) {
-          tabs.push({ key: node.key, title: `${node.label}`, content: 'Tab 1 Content' });
+          tabs.push({
+            key: node.key,
+            title: `${node.label}`,
+            content: {
+              method: 'GET',
+              url: 'https://jsonplaceholder.typicode.com/posts/1',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              params: {},
+              body: {
+                id: 1,
+                title: 'sunt aut facere repellat provident occaecati excepturi optio reprehenderit',
+                body: 'quia et suscipit\nsuscipit recusandae consequuntur expedita et cum\nreprehenderit ',
+              },
+            },
+          });
         }
       };
 
@@ -217,7 +234,7 @@
 </script>
 
 <template>
-  <div class="card flex flex-row flex-wrap min-h-screen">
+  <div class="flex card min-h-screen">
     <Dialog
       v-model:visible="visible"
       modal
@@ -232,7 +249,7 @@
         <Button label="Confirmar" icon="pi pi-check" @click="newEventToAdd" />
       </div>
     </Dialog>
-    <div class="min-h-screen">
+    <div class="card flex flex-grow-0 flex-shrink-0 min-h-screen border-solid border-1">
       <!-- <SplitButton icon="pi pi-plus" :model="items" @click="selected = ''" /> -->
 
       <SpeedDial :model="items" direction="right" @click="selected = ''" />
@@ -268,12 +285,8 @@
       </div>
     </div>
 
-    <div class="pl-3">
-      <TabView :scrollable="true" :hidden="tabs.length === 0">
-        <TabPanel v-for="tab in tabs" :key="tab.title" :header="tab.title">
-          <p class="m-0">{{ tab.content }}</p>
-        </TabPanel>
-      </TabView>
+    <div class="card flex-grow-1 flex-shrink-1 w-screen border-solid border-1">
+      <ApiLayout v-if="tabs.length !== 0" @close="tabs = []" v-for="tab in tabs" :optionsAPI="tab" />
     </div>
   </div>
 </template>
