@@ -4,7 +4,7 @@ export const NodeService = {
       {
         key: '0',
         label: 'Documents',
-        data: 'Documents Folder',
+        data: 'folder',
         icon: 'pi pi-fw pi-inbox',
         children: [
           {
