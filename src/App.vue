@@ -1,6 +1,6 @@
 <script>
-  import { ref, onMounted, reactive } from 'vue';
-  import ApiLayout from './components/ApiLayout.vue';
+  import { ref, toRefs, onMounted, reactive } from 'vue';
+  import ApiRequest from './components/ApiRequest.vue';
 
   import Tree from 'primevue/tree';
   import TabView from 'primevue/tabview';
@@ -15,7 +15,7 @@
 
   export default {
     components: {
-      ApiLayout,
+      ApiRequest,
       Tree,
       TabView,
       TabPanel,
@@ -34,7 +34,7 @@
       const selected = ref('');
       const itemName = ref('');
       const itemTypeToAdd = ref('');
-      const tabs = reactive([]);
+      const tabsState = reactive({ tabs: [] });
 
       const items = [
         {
@@ -192,8 +192,8 @@
       const onNodeDoubleClick = () => {
         const node = findFolderByKey(selected.value, nodes.value);
 
-        if (node.data !== 'folder' && tabs.findIndex((tab) => tab.key === node.key) === -1) {
-          tabs.push({
+        if (node.data !== 'folder' && tabsState.tabs.findIndex((tab) => tab.key === node.key) === -1) {
+          tabsState.tabs.push({
             key: node.key,
             title: `${node.label}`,
             content: {
@@ -213,10 +213,14 @@
         }
       };
 
+      const onCloseApiRequestComponent = () => {
+        tabsState.tabs = [];
+      };
+
       return {
         nodes,
         expandedKeys,
-        tabs,
+        ...toRefs(tabsState),
         visible,
         selected,
         itemName,
@@ -228,6 +232,7 @@
         menu,
         newEventToAdd,
         onNodeDoubleClick,
+        onCloseApiRequestComponent,
       };
     },
   };
@@ -286,7 +291,7 @@
     </div>
 
     <div class="card flex-grow-1 flex-shrink-1 w-screen border-solid border-1">
-      <ApiLayout v-if="tabs.length !== 0" @close="tabs = []" v-for="tab in tabs" :optionsAPI="tab" />
+      <ApiRequest v-if="tabs.length > 0" @close="onCloseApiRequestComponent" v-for="tab in tabs" :optionsAPI="tab" />
     </div>
   </div>
 </template>
