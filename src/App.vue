@@ -1,7 +1,7 @@
 <script>
-  import { ref, toRefs, onMounted, reactive } from 'vue';
+  import { ref, toRefs, reactive } from 'vue';
+  import { v4 as uuidv4 } from 'uuid';
   import ApiRequest from './components/ApiRequest.vue';
-
   import Tree from 'primevue/tree';
   import TabView from 'primevue/tabview';
   import TabPanel from 'primevue/tabpanel';
@@ -11,7 +11,6 @@
   import Button from 'primevue/button';
   import SpeedDial from 'primevue/speeddial';
   import InputText from 'primevue/inputtext';
-  import { useToast } from 'primevue/usetoast';
 
   export default {
     components: {
@@ -27,68 +26,39 @@
       SpeedDial,
     },
     setup() {
-      const toast = useToast();
-
       const nodes = ref([]);
-      const visible = ref(false);
-      const selected = ref('');
-      const itemName = ref('');
-      const itemTypeToAdd = ref('');
-      const tabsState = reactive({ tabs: [] });
+      const menuNodeRef = ref();
+      const visibleDialog = ref(false);
+      const nodeSelected = ref('');
+      const nodeNameImputed = ref('');
+      const nodeTypeToAdd = ref('');
+      const requestTabsState = reactive({ tabs: [] });
 
-      const items = [
+      const nodeTypes = [
         {
           label: 'Pasta',
           icon: 'pi pi-folder',
           command: () => {
-            visible.value = true;
-            itemTypeToAdd.value = 'folder';
+            visibleDialog.value = true;
+            nodeTypeToAdd.value = 'folder';
           },
         },
         {
           label: 'HTTP Request',
           icon: 'pi pi-send',
           command: () => {
-            visible.value = true;
-            itemTypeToAdd.value = 'httpRequest';
+            visibleDialog.value = true;
+            nodeTypeToAdd.value = 'httpRequest';
           },
         },
       ];
 
-      const save = () => {
-        toast.add({ severity: 'success', summary: 'Success', detail: 'Data Saved', life: 3000 });
-      };
-
-      // onMounted(() => {
-      //   NodeService.getTreeNodes().then((data) => (nodes.value = data));
-      // });
-
-      const expandedKeys = ref({});
-
-      // const expandAll = () => {
-      //   for (let node of nodes.value) {
-      //     expandNode(node);
-      //   }
-
-      //   expandedKeys.value = { ...expandedKeys.value };
-      // };
-
-      // const collapseAll = () => {
-      //   expandedKeys.value = {};
-      // };
-
-      const expandNode = (node) => {
-        expandedKeys.value[node.key] = true;
-
-        if (node.children && node.children.length) {
-          for (let child of node.children) {
-            expandNode(child);
-          }
+      const newEventToAdd = () => {
+        if (nodeTypeToAdd.value === 'folder') {
+          addFolder(nodeNameImputed.value, nodeSelected.value);
+        } else if (nodeTypeToAdd.value === 'httpRequest') {
+          addHTTPRequest(nodeNameImputed.value, nodeSelected.value);
         }
-      };
-
-      const generateNewKey = () => {
-        return Math.random().toString(36).substring(2, 9);
       };
 
       const findFolderByKey = (key, nodes) => {
@@ -111,7 +81,7 @@
 
       const addFolder = (name, parentKey) => {
         const newFolder = {
-          key: generateNewKey(),
+          key: `${parentKey || uuidv4()}-${name}`,
           label: name,
           data: 'folder',
           icon: 'pi pi-fw pi-folder',
@@ -129,21 +99,13 @@
           nodes.value.push(newFolder);
         }
 
-        itemName.value = '';
-        visible.value = false;
-      };
-
-      const newEventToAdd = () => {
-        if (itemTypeToAdd.value === 'folder') {
-          addFolder(itemName.value, selected.value);
-        } else if (itemTypeToAdd.value === 'httpRequest') {
-          addHTTPRequest(itemName.value, selected.value);
-        }
+        nodeNameImputed.value = '';
+        visibleDialog.value = false;
       };
 
       const addHTTPRequest = (name, folderKey) => {
         const newItem = {
-          key: generateNewKey(),
+          key: `${folderKey}-${name}-${uuidv4()}`,
           label: name,
           data: 'httpRequest',
           icon: 'pi pi-fw pi-file',
@@ -160,40 +122,23 @@
           nodes.value.push(newItem);
         }
 
-        itemName.value = '';
-        visible.value = false;
+        nodeNameImputed.value = '';
+        visibleDialog.value = false;
       };
 
-      const onNodeSelect = (event) => {
-        selected.value = event.key;
+      const onNodeSelected = (event) => {
+        nodeSelected.value = event.key;
       };
 
-      const menu = ref();
-      // const itemsOptions = ref([
-      //   {
-      //     label: 'Options',
-      //     items: [
-      //       {
-      //         label: 'Refresh',
-      //         icon: 'pi pi-refresh',
-      //       },
-      //       {
-      //         label: 'Export',
-      //         icon: 'pi pi-upload',
-      //       },
-      //     ],
-      //   },
-      // ]);
-
-      const toggle = (event) => {
-        menu.value.toggle(event);
+      const onToggleClickMenuNode = (event) => {
+        menuNodeRef.value(event);
       };
 
-      const onNodeDoubleClick = () => {
-        const node = findFolderByKey(selected.value, nodes.value);
+      const onDoubleClickNode = () => {
+        const node = findFolderByKey(nodeSelected.value, nodes.value);
 
-        if (node.data !== 'folder' && tabsState.tabs.findIndex((tab) => tab.key === node.key) === -1) {
-          tabsState.tabs.push({
+        if (node.data !== 'folder' && requestTabsState.tabs.findIndex((tab) => tab.key === node.key) === -1) {
+          requestTabsState.tabs.push({
             key: node.key,
             title: `${node.label}`,
             content: {
@@ -205,7 +150,7 @@
               params: {},
               body: {
                 id: 1,
-                title: 'sunt aut facere repellat provident occaecati excepturi optio reprehenderit',
+                title: Math.random().toString(36).substring(2, 9),
                 body: 'quia et suscipit\nsuscipit recusandae consequuntur expedita et cum\nreprehenderit ',
               },
             },
@@ -213,26 +158,24 @@
         }
       };
 
-      const onCloseApiRequestComponent = () => {
-        tabsState.tabs = [];
+      const onEventCloseApiRequestComponent = () => {
+        requestTabsState.tabs = [];
       };
 
       return {
+        ...toRefs(requestTabsState),
         nodes,
-        expandedKeys,
-        ...toRefs(tabsState),
-        visible,
-        selected,
-        itemName,
-        itemTypeToAdd,
-        items,
-        save,
-        onNodeSelect,
-        toggle,
-        menu,
+        visibleDialog,
+        nodeSelected,
+        nodeNameImputed,
+        nodeTypeToAdd,
+        nodeTypes,
+        menuNodeRef,
         newEventToAdd,
-        onNodeDoubleClick,
-        onCloseApiRequestComponent,
+        onDoubleClickNode,
+        onEventCloseApiRequestComponent,
+        onNodeSelected,
+        onToggleClickMenuNode,
       };
     },
   };
@@ -241,7 +184,7 @@
 <template>
   <div class="flex card min-h-screen">
     <Dialog
-      v-model:visible="visible"
+      v-model:visible="visibleDialog"
       modal
       :closable="false"
       :showHeader="false"
@@ -250,26 +193,23 @@
       :breakpoints="{ '1199px': '75vw', '575px': '90vw' }"
     >
       <div class="flex flex-wrap justify-content-center p-4">
-        <InputText type="text" placeholder="Qual nome deseja?" v-model="itemName" class="mb-4" />
+        <InputText type="text" placeholder="Qual nome deseja?" v-model="nodeNameImputed" class="mb-4" />
         <Button label="Confirmar" icon="pi pi-check" @click="newEventToAdd" />
       </div>
     </Dialog>
+
     <div class="card flex flex-grow-0 flex-shrink-0 min-h-screen border-solid border-1">
-      <!-- <SplitButton icon="pi pi-plus" :model="items" @click="selected = ''" /> -->
+      <SpeedDial :model="nodeTypes" direction="right" @click="nodeSelected = ''" />
 
-      <SpeedDial :model="items" direction="right" @click="selected = ''" />
-
-      <Toast />
       <div class="pt-3 mt-6">
         <Tree
           :value="nodes"
           :filter="true"
           filterMode="lenient"
           class="w-full md:w-30rem selectionMode='single'"
-          :expandedKeys="expandedKeys"
           selectionMode="single"
-          @node-select="onNodeSelect($event)"
-          @dblclick="onNodeDoubleClick"
+          @node-select="onNodeSelected($event)"
+          @dblclick="onDoubleClickNode"
         >
           <template #default="slotProps">
             <div class="flex align-items-center">
@@ -279,11 +219,11 @@
                 type="button"
                 icon="pi pi-ellipsis-v"
                 class="ml-2"
-                @click="toggle"
+                @click="onToggleClickMenuNode"
                 size="small"
                 style="background: none !important; border: none !important; color: inherit !important"
               />
-              <Menu ref="menu" id="overlay_menu" :model="items" :popup="true" />
+              <Menu ref="menuNodeRef" id="overlay_menu" :model="nodeTypes" :popup="true" />
             </div>
           </template>
         </Tree>
@@ -291,7 +231,11 @@
     </div>
 
     <div class="card flex-grow-1 flex-shrink-1 w-screen border-solid border-1">
-      <ApiRequest v-if="tabs.length > 0" @close="onCloseApiRequestComponent" v-for="tab in tabs" :optionsAPI="tab" />
+      <TabView v-if="tabs.length > 0" :scrollable="true">
+        <TabPanel v-for="tab in tabs" :key="tab.key" :header="tab.title">
+          <ApiRequest @close="onEventCloseApiRequestComponent" :configurationsAPI="tab" />
+        </TabPanel>
+      </TabView>
     </div>
   </div>
 </template>

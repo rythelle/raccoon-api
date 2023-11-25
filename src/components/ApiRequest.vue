@@ -1,5 +1,5 @@
 <script setup>
-  import { reactive, ref, defineProps, onUnmounted } from 'vue';
+  import { reactive, ref, defineProps, onUnmounted, onMounted } from 'vue';
   import VueJsonPretty from 'vue-json-pretty';
   import 'vue-json-pretty/lib/styles.css';
   import InputText from 'primevue/inputtext';
@@ -54,38 +54,65 @@
   ];
 
   const props = defineProps({
-    optionsAPI: {
+    configurationsAPI: {
       type: Object,
       required: true,
     },
   });
 
-  const tabsAPI = reactive([
-    { title: 'Body', content: props.optionsAPI.content.body },
-    { title: 'Headers', content: props.optionsAPI.content.headers },
-    { title: 'Params', content: props.optionsAPI.content.params },
-  ]);
-
-  onUnmounted(() => {
-    console.log('unmounted');
-  });
-
   const emits = defineEmits(['close']);
 
-  const onCloseComponent = () => {
+  const tabsAPI = reactive([
+    { title: 'Body', content: props.configurationsAPI.content.body },
+    { title: 'Headers', content: props.configurationsAPI.content.headers },
+    { title: 'Params', content: props.configurationsAPI.content.params },
+  ]);
+
+  const onClickCloseComponent = () => {
     emits('close');
   };
+
+  onMounted(() => {
+    const userAPIRequestSettings = JSON.parse(localStorage.getItem('userAPIRequestSettings')) || [];
+
+    const alreadyExists = userAPIRequestSettings.some((config) => config?.key === props.configurationsAPI.key);
+
+    if (userAPIRequestSettings.length === 0 || !alreadyExists) {
+      userAPIRequestSettings.push(props.configurationsAPI);
+
+      localStorage.setItem('userAPIRequestSettings', JSON.stringify(userAPIRequestSettings));
+    }
+
+    console.log('pedro', { userAPIRequestSettings });
+  });
+
+  // onMounted(() => {
+  //   if (localStorage.getItem('userAPIRequestSettings')) {
+  //     const userAPISettings = JSON.parse(localStorage.getItem('userAPISettings'));
+  //     props.configurationsAPI = userAPISettings;
+  //   }
+  // });
+
+  console.log('props.configurationsAPI', props.configurationsAPI);
 </script>
 
 <template>
   <div class="flex flex-row-reverse mb-4 mt-0">
-    <Button icon="pi pi-times" severity="danger" text raised rounded aria-label="Cancel" @click="onCloseComponent" />
+    <Button
+      icon="pi pi-times"
+      severity="danger"
+      text
+      raised
+      rounded
+      aria-label="Cancel"
+      @click="onClickCloseComponent"
+    />
   </div>
 
   <div class="flex overflow-hidden">
-    <SplitButton class="m-2 flex-none flex" :label="props.optionsAPI.content.method" :model="items" outlined />
+    <SplitButton class="m-2 flex-none flex" :label="props.configurationsAPI.content.method" :model="items" outlined />
 
-    <InputText class="m-2 flex-grow-1 flex" type="text" v-model="props.optionsAPI.content.url" />
+    <InputText class="m-2 flex-grow-1 flex" type="text" v-model="props.configurationsAPI.content.url" />
 
     <ToggleButton v-model="checked" class="w-9rem flex-none flex" onLabel="Send" offLabel="Cancel" />
   </div>
