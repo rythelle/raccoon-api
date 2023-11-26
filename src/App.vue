@@ -1,5 +1,5 @@
 <script>
-  import { ref, toRefs, reactive } from 'vue';
+  import { ref, toRefs, reactive, onUnmounted, onMounted } from 'vue';
   import { v4 as uuidv4 } from 'uuid';
   import ApiRequest from './components/ApiRequest.vue';
   import Tree from 'primevue/tree';
@@ -53,6 +53,31 @@
         },
       ];
 
+      onMounted(() => {
+        const userNodesTreeSettings = JSON.parse(localStorage.getItem('userNodesTreeSettings')) || [];
+
+        if (userNodesTreeSettings.length > 0) {
+          nodes.value = userNodesTreeSettings;
+        }
+      });
+
+      onUnmounted(() => {
+        console.log('onUnmounted');
+        localStorage.setItem('userNodesTreeSettings', JSON.stringify(nodes.value));
+      });
+
+      // onMounted(() => {
+      //   const userAPIRequestSettings = JSON.parse(localStorage.getItem('userAPIRequestSettings')) || [];
+
+      //   const alreadyExists = userAPIRequestSettings.some((config) => config?.key === props.configurationsAPI.key);
+
+      //   if (userAPIRequestSettings.length === 0 || !alreadyExists) {
+      //     userAPIRequestSettings.push(props.configurationsAPI);
+
+      //     localStorage.setItem('userAPIRequestSettings', JSON.stringify(userAPIRequestSettings));
+      //   }
+      // });
+
       const newEventToAdd = () => {
         if (nodeTypeToAdd.value === 'folder') {
           addFolder(nodeNameImputed.value, nodeSelected.value);
@@ -81,7 +106,7 @@
 
       const addFolder = (name, parentKey) => {
         const newFolder = {
-          key: `${parentKey || uuidv4()}-${name}`,
+          key: `${parentKey || 'root'}-${name}`,
           label: name,
           data: 'folder',
           icon: 'pi pi-fw pi-folder',
@@ -92,11 +117,17 @@
           const parentFolder = findFolderByKey(parentKey, nodes.value);
           if (parentFolder) {
             parentFolder.children.push(newFolder);
+
+            localStorage.setItem('userNodesTreeSettings', JSON.stringify(nodes.value));
           } else {
             nodes.value.push(newFolder);
+
+            localStorage.setItem('userNodesTreeSettings', JSON.stringify(nodes.value));
           }
         } else {
           nodes.value.push(newFolder);
+
+          localStorage.setItem('userNodesTreeSettings', JSON.stringify(nodes.value));
         }
 
         nodeNameImputed.value = '';
@@ -115,11 +146,17 @@
           const folder = findFolderByKey(folderKey, nodes.value);
           if (folder) {
             folder.children.push(newItem);
+
+            localStorage.setItem('userNodesTreeSettings', JSON.stringify(nodes.value));
           } else {
             nodes.value.push(newItem);
+
+            localStorage.setItem('userNodesTreeSettings', JSON.stringify(nodes.value));
           }
         } else {
           nodes.value.push(newItem);
+
+          localStorage.setItem('userNodesTreeSettings', JSON.stringify(nodes.value));
         }
 
         nodeNameImputed.value = '';
@@ -131,7 +168,7 @@
       };
 
       const onToggleClickMenuNode = (event) => {
-        menuNodeRef.value(event);
+        menuNodeRef.value.toggle(event);
       };
 
       const onDoubleClickNode = () => {
@@ -158,8 +195,12 @@
         }
       };
 
-      const onEventCloseApiRequestComponent = () => {
-        requestTabsState.tabs = [];
+      const onEventCloseApiRequestComponent = (keyEvent) => {
+        const index = requestTabsState.tabs.findIndex(({ key }) => key === keyEvent);
+
+        if (index !== -1) {
+          requestTabsState.tabs.splice(index, 1);
+        }
       };
 
       return {

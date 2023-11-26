@@ -4,10 +4,12 @@
 
 ### Development (to do)
 
-- [] Criar sistema de tabs de api request.
-- [] Guardar configurações da tela de api request no localStorage.
-- [] Guardar configurações da tree de pastas no localStorage.
+- [x] Criar sistema de tabs de api request.
+- [x] Guardar configurações da tela de api request no localStorage.
+- [x] Guardar configurações da tree de pastas no localStorage.
+- [x] Criar lógica de envio de request conforme o método.
 - [] Não deixar criar item anexo, pasta ou http request, em item do tipo http request.
+- [] Quando fecha aba de api request tem que dar foco na próxima aberta.
 - [] Não deixar criar um novo item com nome vazio (folder e http request).
 - [] Não está sendo possível criar pasta ou http request quando a pasta está recolhida.
 - [] Mostrar o params e headers em campos de input (key e value).

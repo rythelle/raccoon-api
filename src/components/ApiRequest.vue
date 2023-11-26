@@ -1,5 +1,5 @@
 <script setup>
-  import { reactive, ref, defineProps, onUnmounted, onMounted } from 'vue';
+  import { reactive, ref, onBeforeMount, toRaw, watch } from 'vue';
   import VueJsonPretty from 'vue-json-pretty';
   import 'vue-json-pretty/lib/styles.css';
   import InputText from 'primevue/inputtext';
@@ -9,49 +9,34 @@
   import TabPanel from 'primevue/tabpanel';
   import Button from 'primevue/button';
 
-  const checked = ref(false);
+  const sendingRequest = ref(false);
 
-  const value = ref('');
+  const methodActive = ref('');
 
-  const methods = reactive(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']);
+  const methods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
 
-  const items = [
-    {
-      label: 'GET',
-      icon: 'pi pi-refresh',
-      command: () => {
-        toast.add({ severity: 'success', summary: 'Updated', detail: 'Data Updated', life: 3000 });
+  const createMethod = (label, icon) => {
+    return {
+      label,
+      icon,
+      command: (event) => {
+        apiRequestSettings.method = event.item.label;
       },
-    },
-    {
-      label: 'POST',
-      icon: 'pi pi-refresh',
-      command: () => {
-        toast.add({ severity: 'success', summary: 'Updated', detail: 'Data Updated', life: 3000 });
-      },
-    },
-    {
-      label: 'PUT',
-      icon: 'pi pi-refresh',
-      command: () => {
-        toast.add({ severity: 'success', summary: 'Updated', detail: 'Data Updated', life: 3000 });
-      },
-    },
-    {
-      label: 'PATCH',
-      icon: 'pi pi-refresh',
-      command: () => {
-        toast.add({ severity: 'success', summary: 'Updated', detail: 'Data Updated', life: 3000 });
-      },
-    },
-    {
-      label: 'DELETE',
-      icon: 'pi pi-refresh',
-      command: () => {
-        toast.add({ severity: 'success', summary: 'Updated', detail: 'Data Updated', life: 3000 });
-      },
-    },
-  ];
+    };
+  };
+
+  const typeMethods = reactive(methods.map((method) => createMethod(method, 'pi pi-refresh')));
+
+  const apiRequestSettings = reactive({
+    key: '',
+    title: '',
+    method: '',
+    url: '',
+    headers: '',
+    params: '',
+    body: '',
+    tabs: [],
+  });
 
   const props = defineProps({
     configurationsAPI: {
@@ -62,38 +47,85 @@
 
   const emits = defineEmits(['close']);
 
-  const tabsAPI = reactive([
-    { title: 'Body', content: props.configurationsAPI.content.body },
-    { title: 'Headers', content: props.configurationsAPI.content.headers },
-    { title: 'Params', content: props.configurationsAPI.content.params },
-  ]);
-
-  const onClickCloseComponent = () => {
-    emits('close');
-  };
-
-  onMounted(() => {
+  onBeforeMount(() => {
     const userAPIRequestSettings = JSON.parse(localStorage.getItem('userAPIRequestSettings')) || [];
 
-    const alreadyExists = userAPIRequestSettings.some((config) => config?.key === props.configurationsAPI.key);
+    const index = userAPIRequestSettings.findIndex((config) => config.key === props.configurationsAPI.key);
 
-    if (userAPIRequestSettings.length === 0 || !alreadyExists) {
-      userAPIRequestSettings.push(props.configurationsAPI);
-
-      localStorage.setItem('userAPIRequestSettings', JSON.stringify(userAPIRequestSettings));
+    if (index === -1) {
+      Object.assign(apiRequestSettings, {
+        key: props.configurationsAPI.key,
+        title: props.configurationsAPI.label,
+        method: props.configurationsAPI.content.method,
+        url: props.configurationsAPI.content.url,
+        headers: props.configurationsAPI.content.headers,
+        params: props.configurationsAPI.content.params,
+        body: props.configurationsAPI.content.body,
+        tabs: [
+          {
+            title: 'Body',
+            content: props.configurationsAPI.content.body,
+          },
+          {
+            title: 'Headers',
+            content: props.configurationsAPI.content.headers,
+          },
+          {
+            title: 'Params',
+            content: props.configurationsAPI.content.params,
+          },
+        ],
+      });
+    } else {
+      Object.assign(apiRequestSettings, userAPIRequestSettings[index]);
     }
-
-    console.log('pedro', { userAPIRequestSettings });
   });
 
-  // onMounted(() => {
-  //   if (localStorage.getItem('userAPIRequestSettings')) {
-  //     const userAPISettings = JSON.parse(localStorage.getItem('userAPISettings'));
-  //     props.configurationsAPI = userAPISettings;
-  //   }
-  // });
+  watch(
+    () => apiRequestSettings,
+    (newValue, oldValue) => {
+      let userAPIRequestSettings = JSON.parse(localStorage.getItem('userAPIRequestSettings')) || [];
 
-  console.log('props.configurationsAPI', props.configurationsAPI);
+      const index = userAPIRequestSettings.findIndex((config) => config.key === newValue.key);
+
+      if (index !== -1) {
+        userAPIRequestSettings[index] = toRaw(newValue);
+      } else {
+        userAPIRequestSettings.push(toRaw(newValue));
+      }
+
+      localStorage.setItem('userAPIRequestSettings', JSON.stringify(userAPIRequestSettings));
+    },
+    { deep: true }
+  );
+
+  const onClickCloseComponent = () => {
+    emits('close', apiRequestSettings.key);
+  };
+
+  const onRequestSend = async () => {
+    sendingRequest.value = true;
+
+    const requestOptions = {
+      method: apiRequestSettings.method,
+      headers: apiRequestSettings.headers,
+      body: JSON.stringify(apiRequestSettings.body),
+    };
+
+    try {
+      const response = await fetch(apiRequestSettings.url, requestOptions);
+
+      const data = await response.json();
+
+      console.log(data);
+
+      sendingRequest.value = false;
+    } catch (error) {
+      console.log(error);
+
+      sendingRequest.value = false;
+    }
+  };
 </script>
 
 <template>
@@ -104,21 +136,28 @@
       text
       raised
       rounded
-      aria-label="Cancel"
+      aria-label="Close"
       @click="onClickCloseComponent"
     />
   </div>
 
   <div class="flex overflow-hidden">
-    <SplitButton class="m-2 flex-none flex" :label="props.configurationsAPI.content.method" :model="items" outlined />
+    <SplitButton class="m-2 flex-none flex" :label="apiRequestSettings.method" :model="typeMethods" outlined />
 
-    <InputText class="m-2 flex-grow-1 flex" type="text" v-model="props.configurationsAPI.content.url" />
+    <InputText class="m-2 flex-grow-1 flex" type="text" v-model="apiRequestSettings.url" />
 
-    <ToggleButton v-model="checked" class="w-9rem flex-none flex" onLabel="Send" offLabel="Cancel" />
+    <ToggleButton
+      v-model="sendingRequest"
+      class="w-9rem flex-none flex"
+      :loading="sendingRequest"
+      onLabel="Cancel"
+      offLabel="Send"
+      @click="onRequestSend"
+    />
   </div>
   <div class="card">
     <TabView>
-      <TabPanel v-for="tab in tabsAPI" :key="tab.title" :header="tab.title">
+      <TabPanel v-for="tab in apiRequestSettings.tabs" :key="tab.title" :header="tab.title">
         <p v-if="tab.title === 'Body'" class="m-0"><VueJsonPretty :data="tab.content" /></p>
         <p v-else class="m-0">
           {{ tab.content }}
