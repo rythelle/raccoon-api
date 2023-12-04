@@ -88,6 +88,7 @@
 
       const index = userAPIRequestSettings.findIndex((config) => config.key === newValue.key);
 
+      // If the index is not -1, it means that the configuration already exists, so we update it
       if (index !== -1) {
         userAPIRequestSettings[index] = toRaw(newValue);
       } else {
@@ -126,6 +127,11 @@
       sendingRequest.value = false;
     }
   };
+
+  const onEditBody = (event) => {
+    // apiRequestSettings.body = event.target.value;
+    console.log('pedro', { event });
+  };
 </script>
 
 <template>
@@ -158,7 +164,18 @@
   <div class="card">
     <TabView>
       <TabPanel v-for="tab in apiRequestSettings.tabs" :key="tab.title" :header="tab.title">
-        <p v-if="tab.title === 'Body'" class="m-0"><VueJsonPretty :data="tab.content" /></p>
+        <p v-if="tab.title === 'Body'" class="m-0">
+          <VueJsonPretty
+            :show-line-number="true"
+            :show-icon="true"
+            :virtual="true"
+            :editable="true"
+            editable-trigger="dblclick"
+            :showSelectController="true"
+            @value-change="onEditBody(tab.content)"
+            v-model:data="tab.content"
+          />
+        </p>
         <p v-else class="m-0">
           {{ tab.content }}
         </p>
