@@ -152,14 +152,7 @@
 
     <InputText class="m-2 flex-grow-1 flex" type="text" v-model="apiRequestSettings.url" />
 
-    <ToggleButton
-      v-model="sendingRequest"
-      class="w-9rem flex-none flex"
-      :loading="sendingRequest"
-      onLabel="Cancel"
-      offLabel="Send"
-      @click="onRequestSend"
-    />
+    <Button class="w-9rem flex-none flex" type="button" :loading="sendingRequest" label="Send" @click="onRequestSend" />
   </div>
   <div class="card">
     <TabView>
